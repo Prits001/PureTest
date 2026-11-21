@@ -7,31 +7,39 @@ set timeout="3"
 set color_normal=white/black
 set color_highlight=black/white
 
-# Load filesystem and search modules explicitly — grub-install may or may
-# not have embedded them into the core image depending on the target.
+# Load filesystem and search modules explicitly
 insmod part_gpt
 insmod fat
 insmod ext2
 insmod search
 insmod search_label
 insmod linux
+insmod font
 
 search --no-floppy --set=root --label PUREROOT
 
-menuentry "PureTestImage - benchmark" {
+# Enable graphical terminal with Unicode Cyrillic font if available
+if loadfont /boot/grub/fonts/unicode.pf2 ; then
+    insmod all_video
+    insmod gfxterm
+    set gfxmode=auto
+    terminal_output gfxterm
+fi
+
+menuentry "PureTest — Автоматический запуск бенчмарков" {
 	linux /boot/vmlinuz root=LABEL=PUREROOT rw quiet console=tty1 console=ttyS0 amd_pstate=active cpufreq.default_governor=performance
 	initrd /boot/initrd.img
 }
 
-menuentry "PureTestImage - verbose debug boot" {
+menuentry "PureTest — Подробная отладочная загрузка (Verbose Debug)" {
 	linux /boot/vmlinuz root=LABEL=PUREROOT rw systemd.show_status=1 systemd.log_level=debug console=tty1 console=ttyS0 amd_pstate=active cpufreq.default_governor=performance
 	initrd /boot/initrd.img
 }
 
-menuentry "Reboot" {
+menuentry "Перезагрузка ПК" {
 	reboot
 }
 
-menuentry "Poweroff" {
+menuentry "Выключение питания" {
 	halt
 }

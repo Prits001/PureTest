@@ -1120,35 +1120,35 @@ menu() {
     while true; do
         echo
         echo "=========================================================="
-        echo "PURETESTIMAGE  ($MACHINE | $CPUS cores | AO: $AO_LEVEL)"
-        echo "Available tests:"
+        echo "PURETEST  ($MACHINE | ядер: $CPUS | AO: $AO_LEVEL)"
+        echo "Доступные тесты:"
         local found
         found=$(list_tests)
         if [ -n "$found" ]; then
             for t in $found; do
                 if is_lab_test "$TESTSDIR/$t"; then
-                    echo "  * $t  [lab benchmark (base vs opt)]"
+                    echo "  * $t  [лабораторный бенчмарк (base vs opt)]"
                 else
                     echo "  * $t"
                 fi
             done
         else
-            echo "  (no tests found in $TESTSDIR)"
+            echo "  (тесты не найдены в $TESTSDIR)"
         fi
         echo
-        echo "Actions:"
-        echo "  [a]   Run ALL tests (current AO: $AO_LEVEL)"
-        echo "  [ao]  Run test across ALL AO levels (O0..Ofast comparison matrix)"
-        echo "  [lab] Run Lab Benchmark (base.cpp vs opt.cpp comparison matrix for Word)"
-        echo "  [hw]  Generate Hardware Architecture Profile (machine_specs.tsv)"
-        echo "  [o]   Change AO (Optimization) level [Current: $AO_LEVEL]"
-        echo "  [l]   Run test list from run_list.txt / AUTORUN"
-        echo "  [s]   Drop to interactive root shell"
-        echo "  [c]   Clear screen"
-        echo "  [q]   Exit to shell"
-        echo "  [r]   Reboot machine"
-        echo "  [p]   Power off"
-        echo "Or type: <testname> [AO]  (e.g. 'bench_cpu', 'lab lab1_exp', 'hw', 'ao bench_cpu')"
+        echo "Команды:"
+        echo "  [a]   Запустить ВСЕ тесты (текущая оптимизация: $AO_LEVEL)"
+        echo "  [ao]  Запустить тест по ВСЕМ уровням AO (матрица O0..Ofast)"
+        echo "  [lab] Лабораторная работа (сравнение base.cpp и opt.cpp для Word)"
+        echo "  [hw]  Паспорт аппаратной архитектуры ПК (machine_specs.tsv)"
+        echo "  [o]   Сменить степень оптимизации AO [Текущая: $AO_LEVEL]"
+        echo "  [l]   Запустить список из run_list.txt / AUTORUN"
+        echo "  [s]   Перейти в интерактивную root-консоль bash"
+        echo "  [c]   Очистить экран"
+        echo "  [q]   Выход в консоль"
+        echo "  [r]   Перезагрузка ПК"
+        echo "  [p]   Выключение питания"
+        echo "Или введите: <имя_теста> [AO]  (напр. 'lab lab3_pi_omp', 'hw', 'ao bench_cpu')"
         echo "----------------------------------------------------------"
         printf "puretest [%s]> " "$AO_LEVEL"
         if ! read -r choice; then
@@ -1157,16 +1157,16 @@ menu() {
             continue
         fi
         case "$choice" in
-            a|A)
+            a|A|а|А)
                 run_all_tests "$AO_LEVEL"
                 echo
-                printf "Press Enter to return to menu... "
+                printf "Нажмите Enter для возврата в меню... "
                 read -r _ 2>/dev/null || true
                 ;;
-            ao|AO)
+            ao|AO|ао|АО)
                 echo
-                echo "Available tests: $(list_tests | tr '\n' ' ')"
-                printf "Enter test name for full AO comparison (or 'all'): "
+                echo "Доступные тесты: $(list_tests | tr '\n' ' ')"
+                printf "Введите имя теста для полного AO-анализа (или 'all'): "
                 read -r ao_target
                 if [ -n "$ao_target" ]; then
                     if [ "$ao_target" = "all" ] || [ "$ao_target" = "ALL" ]; then
@@ -1178,10 +1178,10 @@ menu() {
                     fi
                 fi
                 echo
-                printf "Press Enter to return to menu... "
+                printf "Нажмите Enter для возврата в меню... "
                 read -r _ 2>/dev/null || true
                 ;;
-            lab|LAB)
+            lab|LAB|лаб|ЛАБ)
                 echo
                 local lab_tests=()
                 for t in $(list_tests); do
@@ -1192,23 +1192,23 @@ menu() {
                 local def_lab="lab1_exp"
                 if [ ${#lab_tests[@]} -gt 0 ]; then
                     def_lab="${lab_tests[0]}"
-                    echo "Available lab benchmarks: ${lab_tests[*]}"
+                    echo "Доступные лабораторные работы: ${lab_tests[*]}"
                 else
-                    echo "Available tests: $(list_tests | tr '\n' ' ')"
+                    echo "Доступные тесты: $(list_tests | tr '\n' ' ')"
                 fi
-                printf "Enter lab test name [default: %s]: " "$def_lab"
+                printf "Введите имя лабораторной работы [по умолчанию: %s]: " "$def_lab"
                 read -r lab_target
                 [ -z "$lab_target" ] && lab_target="$def_lab"
                 if [ -n "$lab_target" ]; then
                     run_lab_benchmark "$lab_target"
                 fi
                 echo
-                printf "Press Enter to return to menu... "
+                printf "Нажмите Enter для возврата в меню... "
                 read -r _ 2>/dev/null || true
                 ;;
-            hw|HW)
+            hw|HW|рв|РВ)
                 echo
-                log "Collecting full hardware architecture profile..."
+                log "Сбор полного паспорта аппаратной архитектуры ПК..."
                 mkdir -p "$DATADIR/results"
                 if command -v puretest-hw >/dev/null 2>&1; then
                     puretest-hw "$DATADIR/results"
@@ -1221,27 +1221,27 @@ menu() {
                     echo
                     cat "$DATADIR/results/machine_specs.txt"
                     echo
-                    log "Hardware specs saved to: $DATADIR/results/machine_specs.tsv (Word-ready)"
+                    log "Паспорт ПК сохранен в: $DATADIR/results/machine_specs.tsv (готов для Word)"
                 fi
                 echo
-                printf "Press Enter to return to menu... "
+                printf "Нажмите Enter для возврата в меню... "
                 read -r _ 2>/dev/null || true
                 ;;
-            o|O)
+            o|O|о|О)
                 echo
                 echo "=========================================================="
-                echo "             SELECT AO (OPTIMIZATION) LEVEL              "
+                echo "             ВЫБОР СТЕПЕНИ ОПТИМИЗАЦИИ (AO)              "
                 echo "=========================================================="
-                echo "  [0] O0    : -O0 -fno-builtin  (No optimization, debug baseline)"
-                echo "  [1] O1    : -O1               (Basic optimizations)"
-                echo "  [2] O2    : -O2 -march=native (Standard - default)"
-                echo "  [3] O3    : -O3 -march=native (Aggressive loop & vectorization)"
-                echo "  [4] Ofast : -Ofast -march=native -flto (Maximum performance)"
-                echo "  [5] Os    : -Os               (Optimize for binary size)"
-                echo "  [a] ALL   : Run each test across ALL AO levels (O0..Ofast)"
-                echo "  [c] Custom: Enter custom compiler flags directly"
+                echo "  [0] O0    : -O0 -fno-builtin  (Без оптимизаций, чистый Debug)"
+                echo "  [1] O1    : -O1               (Базовые оптимизации)"
+                echo "  [2] O2    : -O2 -march=native (Стандартная - по умолчанию)"
+                echo "  [3] O3    : -O3 -march=native (Агрессивная векторизация и разворачивание)"
+                echo "  [4] Ofast : -Ofast -march=native -flto (Экстремальная скорость)"
+                echo "  [5] Os    : -Os               (Оптимизация по размеру)"
+                echo "  [a] ALL   : Прогнать тесты по ВСЕМ степеням AO (O0..Ofast)"
+                echo "  [c] Свой  : Ввести флаги компилятора вручную"
                 echo "----------------------------------------------------------"
-                printf "Select level [0-5, a, c]: "
+                printf "Выберите уровень [0-5, a, c]: "
                 read -r sel_opt
                 case "$sel_opt" in
                     0) AO_LEVEL="O0";;
@@ -1250,19 +1250,19 @@ menu() {
                     3) AO_LEVEL="O3";;
                     4|f|fast|Ofast) AO_LEVEL="Ofast";;
                     5|s|Os) AO_LEVEL="Os";;
-                    a|A|all) AO_LEVEL="all";;
-                    c|C)
-                        printf "Enter custom flags: "
+                    a|A|all|а|А) AO_LEVEL="all";;
+                    c|C|с|С)
+                        printf "Введите флаги компилятора: "
                         read -r custom_f
                         if [ -n "$custom_f" ]; then
                             AO_LEVEL="$custom_f"
                         fi
                         ;;
-                    *) echo "Invalid choice, keeping AO_LEVEL=$AO_LEVEL";;
+                    *) echo "Неверный выбор, сохранено AO_LEVEL=$AO_LEVEL";;
                 esac
-                log "AO Level set to: $AO_LEVEL"
+                log "Степень AO установлена в: $AO_LEVEL"
                 ;;
-            l|L)
+            l|L|д|Д)
                 local list_file=""
                 for f in "$DATADIR/run_list.txt" "$DATADIR/AUTORUN" "$DATADIR/tests.txt"; do
                     if [ -f "$f" ]; then list_file="$f"; break; fi
@@ -1270,38 +1270,38 @@ menu() {
                 if [ -n "$list_file" ]; then
                     run_test_list "$list_file"
                 else
-                    echo "Notice: no run_list.txt or AUTORUN found on DATADISK."
-                    echo "Create DATADISK/run_list.txt with test names to use this option."
+                    echo "Уведомление: run_list.txt или AUTORUN не найден на DATADISK."
+                    echo "Создайте DATADISK/run_list.txt со списком тестов для этой опции."
                 fi
                 echo
-                printf "Press Enter to return to menu... "
+                printf "Нажмите Enter для возврата в меню... "
                 read -r _ 2>/dev/null || true
                 ;;
-            s|S|q|Q)
+            s|S|q|Q|ы|Ы|й|Й)
                 echo "======================================================================"
-                echo "                 PURETESTIMAGE - INTERACTIVE ROOT SHELL               "
+                echo "                 PURETEST — ИНТЕРАКТИВНАЯ ROOT-КОНСОЛЬ                "
                 echo "======================================================================"
-                echo " * DATADISK is mounted at: $DATADIR"
-                echo " * Operator Cheatsheet & Guide: type 'cheatsheet' (or 'help')"
-                echo "   or read: less /opt/puretest/CHEATSHEET.md"
-                echo "   (covers drive mounting/unmounting, lsusb/lspci, manual compiling)"
-                echo " * Troubleshooting tools: puretest-status, puretest-log, puretest-mount"
-                echo " * To return to this menu at any time: type 'exit' or 'menu'"
+                echo " * Раздел DATADISK смонтирован в: $DATADIR"
+                echo " * Памятка оператора: введите 'cheatsheet' (или 'help')"
+                echo "   или прочитайте: less /opt/puretest/CHEATSHEET.md"
+                echo " * Переключение раскладки клавиатуры: Alt+Shift"
+                echo " * Инструменты диагностики: puretest-status, puretest-log, puretest-mount"
+                echo " * Для возврата в главное меню: введите 'exit' или 'menu'"
                 echo "======================================================================"
                 /bin/bash -i >&3 2>&4 <&5 || true
                 ;;
-            c|C)
+            c|C|с|С)
                 clear 2>/dev/null || true
                 continue
                 ;;
-            r|R)
-                echo "Rebooting system..."
+            r|R|р|Р|к|К)
+                echo "Перезагрузка системы..."
                 sync
                 reboot -f 2>/dev/null || systemctl reboot -ff 2>/dev/null || { echo 1 > /proc/sys/kernel/sysrq 2>/dev/null || true; echo b > /proc/sysrq-trigger 2>/dev/null || true; }
                 return 0
                 ;;
-            p|P)
-                echo "Powering off..."
+            p|P|п|П)
+                echo "Выключение питания..."
                 sync
                 poweroff -f 2>/dev/null || systemctl poweroff -ff 2>/dev/null || { echo 1 > /proc/sys/kernel/sysrq 2>/dev/null || true; echo o > /proc/sysrq-trigger 2>/dev/null || true; }
                 return 0
@@ -1313,15 +1313,15 @@ menu() {
                 local cmd_test cmd_ao
                 read -r cmd_test cmd_ao <<< "$choice"
 
-                if [ "$cmd_test" = "lab" ]; then
+                if [ "$cmd_test" = "lab" ] || [ "$cmd_test" = "лаб" ]; then
                     local lab_target="${cmd_ao:-lab1_exp}"
                     run_lab_benchmark "$lab_target"
-                elif [ "$cmd_test" = "hw" ]; then
+                elif [ "$cmd_test" = "hw" ] || [ "$cmd_test" = "рв" ]; then
                     mkdir -p "$DATADIR/results"
                     puretest-hw "$DATADIR/results" 2>/dev/null || /usr/local/bin/puretest-hw "$DATADIR/results" 2>/dev/null || true
                     cat "$DATADIR/results/machine_specs.txt" 2>/dev/null || true
-                elif [ "$cmd_test" = "ao" ] && [ -n "$cmd_ao" ]; then
-                    if [ "$cmd_ao" = "all" ]; then
+                elif [ "$cmd_test" = "ao" ] || [ "$cmd_test" = "ао" ] && [ -n "$cmd_ao" ]; then
+                    if [ "$cmd_ao" = "all" ] || [ "$cmd_ao" = "все" ]; then
                         for t in $(list_tests); do run_test_all_ao "$t"; done
                     else
                         run_test_all_ao "$cmd_ao"
@@ -1330,11 +1330,11 @@ menu() {
                     local target_ao="${cmd_ao:-$AO_LEVEL}"
                     run_test "$cmd_test" "$target_ao"
                 else
-                    echo "Unknown command or test: $choice"
-                    echo "Type a test name, 'lab <testname>', 'ao <testname>', 'hw', or select an action [a/ao/lab/hw/o/l/s/c/q/r/p]."
+                    echo "Неизвестная команда или тест: $choice"
+                    echo "Введите имя теста, 'lab <имя>', 'ao <имя>', 'hw', или выберите действие [a/ao/lab/hw/o/l/s/c/q/r/p]."
                 fi
                 echo
-                printf "Press Enter to return to menu... "
+                printf "Нажмите Enter для возврата в меню... "
                 read -r _ 2>/dev/null || true
                 ;;
         esac

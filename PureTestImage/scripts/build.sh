@@ -322,6 +322,18 @@ else
         --removable --no-nvram || { echo "ERROR: EFI grub-install failed"; exit 1; }
 fi
 
+# Install GRUB Unicode font for Cyrillic menu rendering
+mkdir -p "$TMP/root-boot/boot/grub/fonts" "$TMP/esp/boot/grub/fonts" "$TMP/esp/EFI/BOOT/fonts"
+for gf in "$TMP/root-boot/boot/grub/fonts/unicode.pf2" "$TMP/root-boot/usr/share/grub/unicode.pf2" /usr/share/grub/unicode.pf2; do
+    if [ -f "$gf" ]; then
+        cp "$gf" "$TMP/root-boot/boot/grub/fonts/unicode.pf2" 2>/dev/null || true
+        cp "$gf" "$TMP/esp/boot/grub/fonts/unicode.pf2" 2>/dev/null || true
+        cp "$gf" "$TMP/esp/EFI/BOOT/fonts/unicode.pf2" 2>/dev/null || true
+        echo "  Installed GRUB Unicode font for Cyrillic menu support"
+        break
+    fi
+done
+
 # Populate grub.cfg in all discovery locations for BIOS, UEFI, and Debian signed GRUB
 cp "$REPO_ROOT/board/grub.cfg.in" "$TMP/root-boot/boot/grub/grub.cfg"
 cp "$REPO_ROOT/board/grub.cfg.in" "$TMP/esp/EFI/BOOT/grub.cfg"
