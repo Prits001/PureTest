@@ -579,6 +579,7 @@ run_lab_benchmark() { # $1 = test name
     fi
 
     local max_base_n="${LAB_BASE_MAX_N:-1000000}"
+    [ -f "$srcdir/max_base_n" ] && max_base_n=$(tr -d ' \r\n' < "$srcdir/max_base_n")
     local base_timeout_hit=0
 
     local acc_rows=()
@@ -795,11 +796,116 @@ run_lab_benchmark() { # $1 = test name
         echo "=================================================================================================================================================================="
     } > "$time_txt"
 
-    # 6. Display to console and persist
+    # 6. Thread Scaling Benchmark (for OpenMP tests)
+    local thr_tsv=""
+    local thr_txt=""
+    if grep -q -- "-fopenmp" "$srcdir/build.flags" 2>/dev/null || [ -f "$srcdir/threads.txt" ]; then
+        local work_opt="/tmp/lab_${name}_opt_O2"
+        if [ -x "$work_opt/bin" ]; then
+            local thread_n=""
+            [ -f "$srcdir/threads_n.txt" ] && thread_n=$(head -1 "$srcdir/threads_n.txt" | tr -d ' \r\n')
+            if [ -z "$thread_n" ]; then
+                thread_n="${inputs[${#inputs[@]}-1]}"
+                read -r _ thread_n <<< "$thread_n"
+                [ -z "$thread_n" ] && thread_n="500000000"
+            fi
+
+            echo
+            log "Running OpenMP thread scaling benchmark (N=$thread_n, binary: opt_O2)..."
+
+            local thread_list=()
+            if [ -f "$srcdir/threads.txt" ]; then
+                while IFS= read -r line || [ -n "$line" ]; do
+                    line=$(echo "$line" | sed 's/\r$//; s/[[:space:]]*#.*$//; /^[[:space:]]*$/d')
+                    [ -n "$line" ] && thread_list+=("$line")
+                done < "$srcdir/threads.txt"
+            else
+                local cur_t=1
+                thread_list+=(1)
+                while [ $((cur_t * 2)) -le "$CPUS" ]; do
+                    cur_t=$((cur_t * 2))
+                    thread_list+=("$cur_t")
+                done
+                if [ "$cur_t" -ne "$CPUS" ] && [ "$CPUS" -gt 1 ]; then
+                    thread_list+=("$CPUS")
+                fi
+            fi
+
+            local t1_time=""
+            local thread_rows_tsv=()
+            local thread_rows_txt=()
+
+            for t in "${thread_list[@]}"; do
+                rm -f "$work_opt/.time" "$work_opt/run.out" "$work_opt/run.err"
+                local run_stdin
+                run_stdin=$(printf "%s\n%s\n" "$thread_n" "$t")
+
+                OMP_NUM_THREADS="$t" printf "%s" "$run_stdin" | /usr/bin/time -f "%e" -o "$work_opt/.time" timeout "$TIMEOUT" "$work_opt/bin" > "$work_opt/run.out" 2> "$work_opt/run.err"
+
+                local t_val
+                t_val=$(grep -i "Затраченное время:" "$work_opt/run.out" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1)
+                [ -z "$t_val" ] && t_val=$(cat "$work_opt/.time" 2>/dev/null | tr -d ' \r\n')
+                [ -z "$t_val" ] && t_val="-"
+
+                if [ "$t" -eq 1 ] && [ "$t_val" != "-" ]; then
+                    t1_time="$t_val"
+                fi
+
+                local speedup="-"
+                local eff="-"
+                if [ "$t_val" != "-" ] && [ -n "$t1_time" ] && [ "$t1_time" != "-" ]; then
+                    read -r speedup eff <<< $(awk -v t1="$t1_time" -v tt="$t_val" -v th="$t" 'BEGIN {
+                        if (tt > 0 && t1 > 0) {
+                            s = t1 / tt;
+                            e = (s / th) * 100.0;
+                            printf "%.2f\t%.1f%%", s, e;
+                        } else {
+                            print "-\t-";
+                        }
+                    }')
+                fi
+
+                thread_rows_tsv+=("$t	$t_val	$speedup	$eff")
+                thread_rows_txt+=("$(printf "%-10s | %-16s | %-16s | %-14s" "$t" "${t_val}с" "${speedup}x" "$eff")")
+                log "   [threads: $t] time=${t_val}s, speedup=${speedup}x, efficiency=${eff}"
+            done
+
+            thr_tsv="$lab_resdir/threads_table.tsv"
+            thr_txt="$lab_resdir/threads_table.txt"
+
+            {
+                printf "Число потоков (T)\tВремя t(T), сек.\tУскорение S (t1/tT)\tЭффективность E (S/T, %%%%)\n"
+                for r in "${thread_rows_tsv[@]}"; do
+                    echo "$r"
+                done
+            } > "$thr_tsv"
+
+            {
+                echo "=================================================================================================="
+                echo "ТАБЛИЦА 3. ИССЛЕДОВАНИЕ МАСШТАБИРУЕМОСТИ ОТ КОЛИЧЕСТВА ПОТОКОВ (OpenMP): $name"
+                echo "Параметр N: $thread_n (уровень оптимизации: O2)"
+                echo "Machine   : $MACHINE ($CPUS cores, $CPU)"
+                echo "Timestamp : $(date -u +'%Y-%m-%d %H:%M:%SZ' 2>/dev/null || date)"
+                echo "--------------------------------------------------------------------------------------------------"
+                printf "%-10s | %-16s | %-16s | %-14s\n" "Потоки (T)" "Время t(T)" "Ускорение S" "Эффективность"
+                echo "--------------------------------------------------------------------------------------------------"
+                for line in "${thread_rows_txt[@]}"; do
+                    echo "$line"
+                done
+                echo "=================================================================================================="
+            } > "$thr_txt"
+        fi
+    fi
+
+    # 7. Display to console and persist
     echo
     cat "$acc_txt"
     echo
     cat "$time_txt"
+    if [ -n "$thr_txt" ] && [ -f "$thr_txt" ]; then
+        echo
+        cat "$thr_txt"
+    fi
     echo
 
     mkdir -p "$DATADIR/results"
@@ -807,12 +913,20 @@ run_lab_benchmark() { # $1 = test name
     cp "$acc_txt" "$DATADIR/results/${name}_accuracy.txt" 2>/dev/null || true
     cp "$time_tsv" "$DATADIR/results/${name}_timing.tsv" 2>/dev/null || true
     cp "$time_txt" "$DATADIR/results/${name}_timing.txt" 2>/dev/null || true
+    if [ -n "$thr_tsv" ] && [ -f "$thr_tsv" ]; then
+        cp "$thr_tsv" "$DATADIR/results/${name}_threads.tsv" 2>/dev/null || true
+        cp "$thr_txt" "$DATADIR/results/${name}_threads.txt" 2>/dev/null || true
+    fi
 
     {
         echo
         cat "$acc_txt"
         echo
         cat "$time_txt"
+        if [ -n "$thr_txt" ] && [ -f "$thr_txt" ]; then
+            echo
+            cat "$thr_txt"
+        fi
         echo
     } >> "$DATADIR/out.txt" 2>/dev/null || true
 
@@ -821,7 +935,10 @@ run_lab_benchmark() { # $1 = test name
     log "Word tables generated on DATADISK:"
     log "  1. Accuracy Table : $DATADIR/results/${name}_accuracy.tsv"
     log "  2. Timing Table   : $DATADIR/results/${name}_timing.tsv"
-    log "  3. Hardware Specs : $DATADIR/results/machine_specs_${MACHINE}.tsv"
+    if [ -n "$thr_tsv" ] && [ -f "$thr_tsv" ]; then
+        log "  3. Thread Scaling : $DATADIR/results/${name}_threads.tsv"
+    fi
+    log "  4. Hardware Specs : $DATADIR/results/machine_specs_${MACHINE}.tsv"
     log "  Tip: Open .tsv files and copy/paste directly into Microsoft Word for instant native tables."
     return 0
 }
