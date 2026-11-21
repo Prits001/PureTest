@@ -1,0 +1,6 @@
+# Configuration for console-setup: Cyrillic UTF-8 console font
+ACTIVE_CONSOLES="/dev/tty[1-6]"
+CHARMAP="UTF-8"
+CODESET="UniCyr"
+FONTFACE="Fixed"
+FONTSIZE="16"

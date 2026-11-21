@@ -36,6 +36,13 @@ AO_LEVEL="${AO_LEVEL:-O2}"   # Default AO level: O0, O1, O2, O3, Ofast, Os, all
 FLAGS="${FLAGS:--O2 -march=native}"
 CURRENT_TEST_FLAGS=""
 export TERM="${TERM:-linux}"
+export LANG="${LANG:-en_US.UTF-8}"
+export LC_ALL="${LC_ALL:-en_US.UTF-8}"
+
+# Ensure virtual console is in UTF-8 mode and load Cyrillic font
+printf '\033%%G' > /dev/tty1 2>/dev/null || true
+command -v setupcon >/dev/null 2>&1 && setupcon --force 2>/dev/null || true
+command -v setfont >/dev/null 2>&1 && (setfont UniCyr_8x16 2>/dev/null || setfont cyr-sun16 2>/dev/null || true)
 
 # ---------------------------------------------------------------- machine id
 # Read raw DMI product name and sanitize against FAT32-illegal characters (/\:*?"<>|)

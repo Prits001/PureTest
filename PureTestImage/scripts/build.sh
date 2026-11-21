@@ -37,7 +37,7 @@ ROOT_SIZE="${ROOT_SIZE:-1.5G}"                 # root partition size
 ESP_SIZE="${ESP_SIZE:-64MiB}"                  # EFI System Partition size
 ALIGN="1MiB"
 ROOT_PASS="${ROOT_PASS:-puretest}"             # default root password: puretest
-CUSTOM_PACKAGES="${CUSTOM_PACKAGES:-g++ make binutils time usbutils pciutils util-linux less nano firmware-linux-free firmware-realtek firmware-iwlwifi firmware-atheros firmware-misc-nonfree amd64-microcode intel-microcode}"
+CUSTOM_PACKAGES="${CUSTOM_PACKAGES:-g++ make binutils time usbutils pciutils util-linux less nano kbd console-setup locales firmware-linux-free firmware-realtek firmware-iwlwifi firmware-atheros firmware-misc-nonfree amd64-microcode intel-microcode}"
 USE_CACHE="${USE_CACHE:-1}"                    # 1 = cache debian .deb packages; 0 = fresh download
 CACHE_DIR="${CACHE_DIR:-$REPO_ROOT/.cache}"
 APT_CACHE="$CACHE_DIR/apt"
@@ -121,6 +121,13 @@ SOURCES
     apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
         $CUSTOM_PACKAGES kmod initramfs-tools systemd-sysv \
         shim-signed grub-efi-amd64-signed
+
+    # Generate UTF-8 locales (en_US and ru_RU)
+    if [ -f /etc/locale.gen ]; then
+        sed -i 's/^# *\(ru_RU.UTF-8 UTF-8\)/\1/' /etc/locale.gen 2>/dev/null || true
+        sed -i 's/^# *\(en_US.UTF-8 UTF-8\)/\1/' /etc/locale.gen 2>/dev/null || true
+        locale-gen || true
+    fi
 
     # Modern Linux kernel (6.12+ LTS from backports) + cpupower for Zen 5 (Family 1Ah) & modern hardware
     if [ "$USE_BACKPORTS_KERNEL" = "1" ] && [ "$RELEASE" = "bookworm" ]; then
